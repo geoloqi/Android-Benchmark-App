@@ -1,4 +1,4 @@
-package com.geoloqi.android.sample.ui;
+package com.geoloqi.benchmark.ui;
 
 import android.content.ComponentName;
 import android.content.Intent;
@@ -13,7 +13,6 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 
-import com.geoloqi.android.sample.R;
 import com.geoloqi.android.sdk.LQBuild;
 import com.geoloqi.android.sdk.LQSession;
 import com.geoloqi.android.sdk.LQSharedPreferences;
@@ -21,6 +20,7 @@ import com.geoloqi.android.sdk.LQTracker;
 import com.geoloqi.android.sdk.LQTracker.LQTrackerProfile;
 import com.geoloqi.android.sdk.service.LQService;
 import com.geoloqi.android.sdk.service.LQService.LQBinder;
+import com.geoloqi.benchmark.R;
 
 /**
  * <p>This activity class is used to expose location tracking

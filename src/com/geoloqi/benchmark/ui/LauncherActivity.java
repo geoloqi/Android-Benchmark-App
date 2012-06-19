@@ -1,4 +1,4 @@
-package com.geoloqi.android.sample.ui;
+package com.geoloqi.benchmark.ui;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -14,14 +14,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-import com.geoloqi.android.sample.R;
-import com.geoloqi.android.sample.receiver.SampleReceiver;
 import com.geoloqi.android.sdk.LQTracker;
 import com.geoloqi.android.sdk.LQTracker.LQTrackerProfile;
 import com.geoloqi.android.sdk.provider.LQDatabaseHelper;
 import com.geoloqi.android.sdk.receiver.LQBroadcastReceiver;
 import com.geoloqi.android.sdk.service.LQService;
 import com.geoloqi.android.sdk.service.LQService.LQBinder;
+import com.geoloqi.benchmark.R;
+import com.geoloqi.benchmark.receiver.SampleReceiver;
 
 /**
  * <p>This is the main {@link Activity} for the Geoloqi Sample Android
