@@ -28,11 +28,15 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.geoloqi.android.sdk.LQSession;
+import com.geoloqi.android.sdk.LQTracker;
 import com.geoloqi.android.sdk.LQTracker.LQTrackerProfile;
 import com.geoloqi.android.sdk.service.LQService;
 import com.geoloqi.android.sdk.service.LQService.LQBinder;
@@ -47,7 +51,8 @@ import com.geoloqi.benchmark.receiver.SampleReceiver;
  * 
  * @author Tristan Waddington
  */
-public class LauncherActivity extends Activity implements OnClickListener {
+public class LauncherActivity extends Activity implements OnClickListener,
+        OnItemSelectedListener {
     public static final String TAG = "LauncherActivity";
     public static final String PARAM_ACTIVE_TEST = "com.geoloqi.benchmark.param.ACTIVE_TEST";
 
@@ -56,6 +61,7 @@ public class LauncherActivity extends Activity implements OnClickListener {
     private Button mStartTestButton;
     private Button mStopTestButton;
     private TextView mBatteryLevel;
+    private Spinner mTrackerProfile;
 
     private SharedPreferences mSharedPreferences;
     private SimpleDateFormat mDateFormat;
@@ -85,6 +91,10 @@ public class LauncherActivity extends Activity implements OnClickListener {
         // Get our TextView
         mBatteryLevel = (TextView) findViewById(R.id.battery_level);
         mBatteryLevel.setText(String.format("%s%%", getBattery()));
+        
+        // Get our Spinner
+        mTrackerProfile = (Spinner) findViewById(R.id.tracker_profile);
+        mTrackerProfile.setOnItemSelectedListener(this);
         
         // Wire up our buttons
         mStartTestButton = (Button) findViewById(R.id.start_test);
@@ -158,7 +168,38 @@ public class LauncherActivity extends Activity implements OnClickListener {
             break;
         }
     }
-    
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position,
+            long id) {
+        if (mBound && mService != null) {
+            LQTrackerProfile profile = null;
+            switch (position) {
+            case 0:
+                profile = LQTrackerProfile.OFF;
+                break;
+            case 1:
+                profile = LQTrackerProfile.ROUGH;
+                break;
+            case 2:
+                profile = LQTrackerProfile.ADAPTIVE;
+                break;
+            case 3:
+                profile = LQTrackerProfile.LOGGING;
+                break;
+            case 4:
+                profile = LQTrackerProfile.REAL_TIME;
+                break;
+            }
+            mService.getTracker().setProfile(profile);
+        }
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Pass
+    }
+
     /** Get the current battery level as a percent. */
     private int getBattery() {
         Intent intent = registerReceiver(null,
@@ -214,7 +255,7 @@ public class LauncherActivity extends Activity implements OnClickListener {
             
             try {
                 FileWriter fw = new FileWriter(log);
-                fw.write(String.format("Start: %s; Battery: %s%%; Profile: %s; User; %s\n",
+                fw.write(String.format("Start: %s; Battery: %s%%; Profile: %s; User: %s\n",
                         LQSession.formatTimestamp(System.currentTimeMillis()),
                         getBattery(), getProfile(), getUser()));
                 fw.close();
@@ -243,8 +284,8 @@ public class LauncherActivity extends Activity implements OnClickListener {
         if (Environment.MEDIA_MOUNTED.equals(state)) {
             File log = new File(mActiveTestPath);
             try {
-                FileWriter fw = new FileWriter(log);
-                fw.write(String.format("End: %s; Battery: %s%%; Profile: %s; User; %s\n",
+                FileWriter fw = new FileWriter(log, true);
+                fw.write(String.format("End: %s; Battery: %s%%; Profile: %s; User: %s\n",
                         LQSession.formatTimestamp(System.currentTimeMillis()),
                         getBattery(), getProfile(), getUser()));
                 fw.close();
@@ -254,6 +295,12 @@ public class LauncherActivity extends Activity implements OnClickListener {
                 editor.remove(PARAM_ACTIVE_TEST);
                 editor.commit();
                 mActiveTestPath = null;
+                
+                // Display our log path
+                TextView view = (TextView) findViewById(R.id.log_path);
+                if (view != null) {
+                    view.setText(log.getAbsolutePath());
+                }
                 
                 toggleButtonState();
             } catch (IOException e) {
@@ -288,6 +335,9 @@ public class LauncherActivity extends Activity implements OnClickListener {
                 LQBinder binder = (LQBinder) service;
                 mService = binder.getService();
                 mBound = true;
+                
+                // Update the tracker profile Spinner
+                mTrackerProfile.setSelection(getProfile().ordinal());
             } catch (ClassCastException e) {
                 // Pass
             }

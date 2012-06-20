@@ -27,16 +27,28 @@
             android:textSize="32dp"
             android:textStyle="bold"
             android:text="-1%" />
+        <Spinner
+            android:id="@+id/tracker_profile"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/tracker_profile_entries" />
         <Button
             android:id="@+id/start_test"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Start Test" />
+            android:text="START" />
         <Button
             android:id="@+id/stop_test"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            android:text="Stop Test" />
+            android:text="STOP" />
+        <TextView
+            android:id="@+id/log_path"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="9dp"
+            android:text="" />
     </LinearLayout>
 </LinearLayout>
