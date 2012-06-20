@@ -14,7 +14,6 @@ import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.geoloqi.android.sdk.LQBuild;
-import com.geoloqi.android.sdk.LQSession;
 import com.geoloqi.android.sdk.LQSharedPreferences;
 import com.geoloqi.android.sdk.LQTracker;
 import com.geoloqi.android.sdk.LQTracker.LQTrackerProfile;
@@ -144,13 +143,7 @@ public class SettingsActivity extends PreferenceActivity implements OnPreference
     public boolean onPreferenceClick(Preference preference) {
         final String key = preference.getKey();
         if (key.equals(getString(R.string.pref_key_account_username))) {
-            LQSession session = mService.getSession();
-            if (session != null) {
-                if (session.isAnonymous()) {
-                    // Start log-in Activity
-                    startActivity(new Intent(this, AuthActivity.class));
-                }
-            }
+            startActivity(new Intent(this, AuthActivity.class));
             return true;
         }
         return false;

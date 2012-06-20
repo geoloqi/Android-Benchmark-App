@@ -11,135 +11,32 @@
         android:gravity="center"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:text="Geoloqi Android SDK"
+        android:text="@string/app_name"
         android:background="#444444" />
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="wrap_content"
         android:padding="20dp">
         <TextView
+            android:id="@+id/battery_level"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center"
+            android:textSize="32dp"
             android:textStyle="bold"
-            android:text="Tracker Profile" />
-        <TextView
-            android:id="@+id/tracker_profile"
+            android:text="-1%" />
+        <Button
+            android:id="@+id/start_test"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:layout_marginLeft="20dp"
-            android:text="@null" />
-        <TextView
+            android:text="Start Test" />
+        <Button
+            android:id="@+id/stop_test"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:text="Updates" />
-        <TextView
-            android:id="@+id/batched_updates"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:layout_marginLeft="20dp"
-            android:text="No updates to send!" />
-        
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:text="Current Location" />
-        
-        <!-- Provider -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="5dp"
-                android:text="Provider:" />
-            <TextView
-                android:id="@+id/location_provider"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="@null" />
-        </LinearLayout>
-        
-        <!-- Accuracy -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="5dp"
-                android:text="Accuracy:" />
-            <TextView
-                android:id="@+id/location_accuracy"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="0.0" />
-        </LinearLayout>
-        
-        <!-- Latitude -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="5dp"
-                android:text="Latitude:" />
-            <TextView
-                android:id="@+id/location_lat"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="0.0" />
-        </LinearLayout>
-        
-        <!-- Longitude -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="5dp"
-                android:text="Longitude:" />
-            <TextView
-                android:id="@+id/location_long"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="0.0" />
-        </LinearLayout>
-        
-        <!-- Speed -->
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="5dp"
-                android:text="Speed:" />
-            <TextView
-                android:id="@+id/location_speed"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="0.0" />
-        </LinearLayout>
+            android:visibility="gone"
+            android:text="Stop Test" />
     </LinearLayout>
 </LinearLayout>

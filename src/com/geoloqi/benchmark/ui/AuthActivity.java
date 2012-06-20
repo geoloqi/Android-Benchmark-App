@@ -129,12 +129,6 @@ public class AuthActivity extends Activity implements OnClickListener {
                 LQBinder binder = (LQBinder) service;
                 mService = binder.getService();
                 mBound = true;
-                
-                // Display the current tracker profile
-                TextView profileView = (TextView) findViewById(R.id.tracker_profile);
-                if (profileView != null) {
-                    profileView.setText(mService.getTracker().getProfile().toString());
-                }
             } catch (ClassCastException e) {
                 // Pass
             }

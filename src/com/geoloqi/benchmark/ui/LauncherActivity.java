@@ -1,23 +1,39 @@
 package com.geoloqi.benchmark.ui;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.location.Location;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.os.BatteryManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.geoloqi.android.sdk.LQTracker;
+import com.geoloqi.android.sdk.LQSession;
 import com.geoloqi.android.sdk.LQTracker.LQTrackerProfile;
-import com.geoloqi.android.sdk.provider.LQDatabaseHelper;
-import com.geoloqi.android.sdk.receiver.LQBroadcastReceiver;
 import com.geoloqi.android.sdk.service.LQService;
 import com.geoloqi.android.sdk.service.LQService.LQBinder;
 import com.geoloqi.benchmark.R;
@@ -31,13 +47,22 @@ import com.geoloqi.benchmark.receiver.SampleReceiver;
  * 
  * @author Tristan Waddington
  */
-public class LauncherActivity extends Activity implements SampleReceiver.OnLocationChangedListener,
-        SampleReceiver.OnTrackerProfileChangedListener, SampleReceiver.OnLocationUploadedListener {
+public class LauncherActivity extends Activity implements OnClickListener {
     public static final String TAG = "LauncherActivity";
+    public static final String PARAM_ACTIVE_TEST = "com.geoloqi.benchmark.param.ACTIVE_TEST";
 
+    private String mActiveTestPath;
+
+    private Button mStartTestButton;
+    private Button mStopTestButton;
+    private TextView mBatteryLevel;
+
+    private SharedPreferences mSharedPreferences;
+    private SimpleDateFormat mDateFormat;
+
+    private BatteryChangeReceiver mBatteryChangeReceiver = new BatteryChangeReceiver();
     private LQService mService;
     private boolean mBound;
-    private SampleReceiver mLocationReceiver = new SampleReceiver();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -47,6 +72,29 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
         // Start the tracking service
         Intent intent = new Intent(this, LQService.class);
         startService(intent);
+        
+        // Get our shared preferences instance
+        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        
+        // Create our date formatter for our logs
+        mDateFormat = new SimpleDateFormat("yyDDD", Locale.US);
+        
+        // Determine if a test is currently active
+        mActiveTestPath = mSharedPreferences.getString(PARAM_ACTIVE_TEST, null);
+        
+        // Get our TextView
+        mBatteryLevel = (TextView) findViewById(R.id.battery_level);
+        mBatteryLevel.setText(String.format("%s%%", getBattery()));
+        
+        // Wire up our buttons
+        mStartTestButton = (Button) findViewById(R.id.start_test);
+        mStartTestButton.setOnClickListener(this);
+        
+        mStopTestButton = (Button) findViewById(R.id.stop_test);
+        mStopTestButton.setOnClickListener(this);
+        
+        // Toggle our UI state
+        toggleButtonState();
     }
 
     @Override
@@ -57,9 +105,10 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
         Intent intent = new Intent(this, LQService.class);
         bindService(intent, mConnection, 0);
         
-        // Wire up the sample location receiver
-        registerReceiver(mLocationReceiver,
-                LQBroadcastReceiver.getDefaultIntentFilter());
+        // Wire up our battery change receiver
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(mBatteryChangeReceiver, filter);
     }
 
     @Override
@@ -72,8 +121,12 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
             mBound = false;
         }
         
-        // Unregister our location receiver
-        unregisterReceiver(mLocationReceiver);
+        // Unregister receiver
+        try {
+            unregisterReceiver(mBatteryChangeReceiver);
+        } catch (IllegalArgumentException e) {
+            // Pass
+        }
     }
 
     @Override
@@ -94,54 +147,138 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
         return false;
     }
 
-    /**
-     * Display the number of batched location fixes waiting to be sent.
-     */
-    private void showBatchedLocationCount() {
-        TextView updates = (TextView) findViewById(R.id.batched_updates);
-        if (updates != null) {
-            final LQTracker tracker = mService.getTracker();
-            final LQDatabaseHelper helper = new LQDatabaseHelper(this);
-            final SQLiteDatabase db = helper.getWritableDatabase();
-            final Cursor c = tracker.getBatchedLocationFixes(db);
-            updates.setText(String.format("%d batched updates",
-                            c.getCount()));
-            c.close();
-            db.close();
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+        case R.id.start_test:
+            startTest();
+            break;
+        case R.id.stop_test:
+            stopTest();
+            break;
+        }
+    }
+    
+    /** Get the current battery level as a percent. */
+    private int getBattery() {
+        Intent intent = registerReceiver(null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        return intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+    }
+    
+    /** Get the active {@link LQTrackerProfile} from the {@link LQTracker}. */
+    private LQTrackerProfile getProfile() {
+        if (mBound && mService != null) {
+            return mService.getTracker().getProfile();
+        }
+        return null;
+    }
+    
+    /** Get the current username from the active {@link LQSession}. */
+    private String getUser() {
+        if (mBound && mService != null) {
+            return mService.getSession().getUsername();
+        }
+        return null;
+    }
+    
+    /** Toggle the button state in the Activity layout. */
+    private void toggleButtonState() {
+        if (!TextUtils.isEmpty(mActiveTestPath)) {
+            // Test running!
+            mStartTestButton.setVisibility(View.GONE);
+            mStopTestButton.setVisibility(View.VISIBLE);
+        } else {
+            // Test *not* running!
+            mStartTestButton.setVisibility(View.VISIBLE);
+            mStopTestButton.setVisibility(View.GONE);
+        }
+    }
+    
+    /** Start a new test and create a new log file. */
+    private void startTest() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File path = getExternalFilesDir(null);
+            
+            // Get today's date code
+            String dateCode = mDateFormat.format(new Date(System.currentTimeMillis()));
+            
+            // Create our log file
+            int i = 1;
+            File log = null;
+            do {
+                log = new File(path,
+                        String.format("geoloqi-%s-%s.log", dateCode, i++));
+            } while(log.exists());
+            
+            try {
+                FileWriter fw = new FileWriter(log);
+                fw.write(String.format("Start: %s; Battery: %s%%; Profile: %s; User; %s\n",
+                        LQSession.formatTimestamp(System.currentTimeMillis()),
+                        getBattery(), getProfile(), getUser()));
+                fw.close();
+                
+                // Save the log filename
+                Editor editor = mSharedPreferences.edit();
+                editor.putString(PARAM_ACTIVE_TEST, log.getAbsolutePath());
+                editor.commit();
+                mActiveTestPath = log.getAbsolutePath();
+                
+                toggleButtonState();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to write to log!", e);
+                Toast.makeText(this, "Failed to write to log!",
+                        Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Toast.makeText(this, "Failed to start test log! Media not mounted.",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
-    /**
-     * Display the values from the last recorded location fix.
-     * @param location
-     */
-    private void showCurrentLocation(Location location) {
-        TextView latitudeView = (TextView) findViewById(R.id.location_lat);
-        if (latitudeView != null) {
-            latitudeView.setText(Double.toString(location.getLatitude()));
-        }
-        
-        TextView longitudeView = (TextView) findViewById(R.id.location_long);
-        if (longitudeView != null) {
-            longitudeView.setText(Double.toString(location.getLongitude()));
-        }
-        
-        TextView accuracyView = (TextView) findViewById(R.id.location_accuracy);
-        if (accuracyView != null) {
-            accuracyView.setText(String.valueOf(location.getAccuracy()));
-        }
-        
-        TextView speedView = (TextView) findViewById(R.id.location_speed);
-        if (speedView != null) {
-            speedView.setText(String.format("%.2f km/h", (location.getSpeed() * 3.6)));
-        }
-        
-        TextView providerView = (TextView) findViewById(R.id.location_provider);
-        if (providerView != null) {
-            providerView.setText(location.getProvider());
+    /** Stop an active test and write the final values to the log. */
+    private void stopTest() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File log = new File(mActiveTestPath);
+            try {
+                FileWriter fw = new FileWriter(log);
+                fw.write(String.format("End: %s; Battery: %s%%; Profile: %s; User; %s\n",
+                        LQSession.formatTimestamp(System.currentTimeMillis()),
+                        getBattery(), getProfile(), getUser()));
+                fw.close();
+                
+                // Remove the logged filename
+                Editor editor = mSharedPreferences.edit();
+                editor.remove(PARAM_ACTIVE_TEST);
+                editor.commit();
+                mActiveTestPath = null;
+                
+                toggleButtonState();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to write to log!", e);
+                Toast.makeText(this, "Failed to write to log!",
+                        Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Toast.makeText(this, "Failed to stop test log! Media not mounted.",
+                    Toast.LENGTH_LONG).show();
         }
     }
-
+    
+    /** A simple receiver for listening for battery level changes. */
+    private class BatteryChangeReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
+                mBatteryLevel.setText(String.format("%s%%",
+                        intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)));
+            }
+        }
+    }
+    
     /** Defines callbacks for service binding, passed to bindService() */
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -151,12 +288,6 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
                 LQBinder binder = (LQBinder) service;
                 mService = binder.getService();
                 mBound = true;
-                
-                // Display the current tracker profile
-                TextView profileView = (TextView) findViewById(R.id.tracker_profile);
-                if (profileView != null) {
-                    profileView.setText(mService.getTracker().getProfile().toString());
-                }
             } catch (ClassCastException e) {
                 // Pass
             }
@@ -167,24 +298,4 @@ public class LauncherActivity extends Activity implements SampleReceiver.OnLocat
             mBound = false;
         }
     };
-
-    @Override
-    public void onTrackerProfileChanged(LQTrackerProfile oldProfile,
-                    LQTrackerProfile newProfile) {
-        TextView profileView = (TextView) findViewById(R.id.tracker_profile);
-        if (profileView != null) {
-            profileView.setText(newProfile.toString());
-        }
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        showBatchedLocationCount();
-        showCurrentLocation(location);
-    }
-
-    @Override
-    public void onLocationUploaded(int count) {
-        showBatchedLocationCount();
-    }
 }
